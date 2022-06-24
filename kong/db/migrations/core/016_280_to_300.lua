@@ -1,14 +1,14 @@
 local log = require "kong.cmd.utils.log"
 local arrays = require "pgmoon.arrays"
 
-local fmt = string.format
-local assert = assert
-local ipairs = ipairs
-local cassandra = require "cassandra"
-local find = string.find
-local upper = string.upper
-local re_find = ngx.re.find
-local encode_array  = arrays.encode_array
+local fmt          = string.format
+local assert       = assert
+local ipairs       = ipairs
+local cassandra    = require "cassandra"
+local find         = string.find
+local upper        = string.upper
+local re_find      = ngx.re.find
+local encode_array = arrays.encode_array
 
 
 -- remove repeated targets, the older ones are not useful anymore. targets with
@@ -175,37 +175,6 @@ local function c_create_vaults(connector, coordinator)
 end
 
 
-local function c_copy_vaults_beta_to_vaults(coordinator)
-  for rows, err in coordinator:iterate("SELECT id, ws_id, prefix, name, description, config, created_at, updated_at, tags FROM vaults_beta") do
-    if err then
-      log.warn("ignored error while running '016_280_to_300' migration: " .. err)
-      break
-    end
-
-    for _, row in ipairs(rows) do
-      local _, err = coordinator:execute(
-        "INSERT INTO vaults (id, ws_id, prefix, name, description, config, created_at, updated_at, tags) " ..
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        cassandra.uuid(row.id),
-        cassandra.uuid(row.ws_id),
-        cassandra.text(row.prefix),
-        cassandra.text(row.name),
-        cassandra.text(row.description),
-        cassandra.text(row.config),
-        cassandra.timestamp(row.created_at),
-        cassandra.timestamp(row.updated_at),
-        cassandra.set(row.tags)
-      )
-      if err then
-        return nil, err
-      end
-    end
-  end
-
-  return true
-end
-
-
 local function c_drop_vaults_beta(coordinator)
   local ok, err = coordinator:execute("DROP TABLE IF EXISTS vaults_beta");
   if not ok then
@@ -292,7 +261,7 @@ local function migrate_regex(reg)
   return "~" .. normalized
 end
 
-local function c_normalize_regex_path(coordinator)
+local function c_migrate_regex_path(coordinator)
   for rows, err in coordinator:iterate("SELECT id, paths FROM routes") do
     if err then
       return nil, err
@@ -301,19 +270,19 @@ local function c_normalize_regex_path(coordinator)
     for i = 1, #rows do
       local route = rows[i]
 
+      if not route.paths then
+        goto continue
+      end
 
       local changed = false
-      for i, path in ipairs(route.paths) do
-        if is_not_regex(path) then
-          goto continue
+      for j, path in ipairs(route.paths) do
+        if not is_not_regex(path) then
+          local migrated_path = migrate_regex(path)
+          if migrated_path ~= path then
+            changed = true
+            route.paths[j] = migrated_path
+          end
         end
-
-        local normalized_path = migrate_regex(path)
-        if normalized_path ~= path then
-          changed = true
-          route.paths[i] = normalized_path
-        end
-        ::continue::
       end
 
       if changed then
@@ -325,6 +294,7 @@ local function c_normalize_regex_path(coordinator)
           return nil, err
         end
       end
+      ::continue::
     end
   end
   return true
@@ -335,7 +305,7 @@ local function render(template, keys)
 end
 
 local function p_migrate_regex_path(connector)
-  for route, err in connector:iterate("SELECT id, paths FROM routes") do
+  for route, err in connector:iterate("SELECT id, paths FROM routes WHERE paths IS NOT NULL") do
     if err then
       return nil, err
     end
@@ -388,40 +358,31 @@ local function p_update_cache_key(connector)
   return true
 end
 
+local function ensure_empty_vaults_tables(connector)
+  local ensure_table_is_empty = function (table)
+    local res, err = connector:query("SELECT * FROM " .. table)
+    if err then
+      -- Assume that the error is about the missing table, which is OK
+      return true
+    end
+    if #res > 0 then
+      return nil, "Cannot perform database upgrade with data in " .. table .. " table.  Please delete all rows from it and retry"
+    end
+  end
+
+  local res, err = ensure_table_is_empty("vaults_beta")
+  if err then
+    return nil, err
+  end
+  local res, err = ensure_table_is_empty("vaults")
+  if err then
+    return nil, err
+  end
+end
+
 return {
   postgres = {
     up = [[
-      DO $$
-      BEGIN
-        -- we only want to run this migration if there is vaults_beta table
-        IF (SELECT to_regclass('vaults_beta')) IS NOT NULL THEN
-          DROP TRIGGER IF EXISTS "vaults_beta_sync_tags_trigger" ON "vaults_beta";
-
-          -- Enterprise Edition has a Vaults table created by a Vault Auth Plugin
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME TO "vault_auth_vaults";
-          ALTER TABLE IF EXISTS ONLY "vault_auth_vaults" RENAME CONSTRAINT "vaults_pkey" TO "vault_auth_vaults_pkey";
-          ALTER TABLE IF EXISTS ONLY "vault_auth_vaults" RENAME CONSTRAINT "vaults_name_key" TO "vault_auth_vaults_name_key";
-
-          ALTER TABLE IF EXISTS ONLY "vaults_beta" RENAME TO "vaults";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_pkey" TO "vaults_pkey";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_id_ws_id_key" TO "vaults_id_ws_id_key";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_prefix_key" TO "vaults_prefix_key";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_prefix_ws_id_key" TO "vaults_prefix_ws_id_key";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_ws_id_fkey" TO "vaults_ws_id_fkey";
-
-          ALTER INDEX IF EXISTS "vaults_beta_tags_idx" RENAME TO "vaults_tags_idx";
-
-          BEGIN
-            CREATE TRIGGER "vaults_sync_tags_trigger"
-            AFTER INSERT OR UPDATE OF "tags" OR DELETE ON "vaults"
-            FOR EACH ROW
-            EXECUTE PROCEDURE sync_tags();
-          EXCEPTION WHEN UNDEFINED_COLUMN OR UNDEFINED_TABLE THEN
-            -- Do nothing, accept existing state
-          END;
-        END IF;
-      END$$;
-
       DO $$
         BEGIN
           ALTER TABLE IF EXISTS ONLY "targets" ADD COLUMN "cache_key" TEXT UNIQUE;
@@ -482,6 +443,51 @@ return {
         END;
       $$;
     ]],
+    up_f = function(connector)
+
+      local res, err = ensure_empty_vaults_tables(connector)
+      if err then
+        return nil, err
+      end
+
+      local _, err = connector:query([[
+      DO $$
+      BEGIN
+        -- we only want to run this migration if there is vaults_beta table
+        IF (SELECT to_regclass('vaults_beta')) IS NOT NULL THEN
+          DROP TRIGGER IF EXISTS "vaults_beta_sync_tags_trigger" ON "vaults_beta";
+
+          -- Enterprise Edition has a Vaults table created by a Vault Auth Plugin
+          ALTER TABLE IF EXISTS ONLY "vaults" RENAME TO "vault_auth_vaults";
+          ALTER TABLE IF EXISTS ONLY "vault_auth_vaults" RENAME CONSTRAINT "vaults_pkey" TO "vault_auth_vaults_pkey";
+          ALTER TABLE IF EXISTS ONLY "vault_auth_vaults" RENAME CONSTRAINT "vaults_name_key" TO "vault_auth_vaults_name_key";
+
+          ALTER TABLE IF EXISTS ONLY "vaults_beta" RENAME TO "vaults";
+          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_pkey" TO "vaults_pkey";
+          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_id_ws_id_key" TO "vaults_id_ws_id_key";
+          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_prefix_key" TO "vaults_prefix_key";
+          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_prefix_ws_id_key" TO "vaults_prefix_ws_id_key";
+          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_ws_id_fkey" TO "vaults_ws_id_fkey";
+
+          ALTER INDEX IF EXISTS "vaults_beta_tags_idx" RENAME TO "vaults_tags_idx";
+
+          BEGIN
+            CREATE TRIGGER "vaults_sync_tags_trigger"
+            AFTER INSERT OR UPDATE OF "tags" OR DELETE ON "vaults"
+            FOR EACH ROW
+            EXECUTE PROCEDURE sync_tags();
+          EXCEPTION WHEN UNDEFINED_COLUMN OR UNDEFINED_TABLE THEN
+            -- Do nothing, accept existing state
+          END;
+        END IF;
+      END$$;
+      ]])
+      if err then
+        return nil, err
+      end
+
+      return true
+    end,
     teardown = function(connector)
       local _, err = p_update_cache_key(connector)
       if err then
@@ -530,7 +536,16 @@ return {
       ALTER TABLE routes ADD atc text;
       ALTER TABLE routes ADD priority int;
     ]],
+
+    up_f = function(connector)
+      local res, err = ensure_empty_vaults_tables(connector)
+      if err then
+        return nil, err
+      end
+    end,
+
     teardown = function(connector)
+
       local coordinator = assert(connector:get_stored_connection())
       local _, err = c_remove_unused_targets(coordinator)
       if err then
@@ -552,22 +567,17 @@ return {
         return nil, err
       end
 
-      _, err = c_create_vaults(connector, coordinator)
-      if err then
-        return nil, err
-      end
-
-      _, err = c_copy_vaults_beta_to_vaults(coordinator)
-      if err then
-        return nil, err
-      end
-
       _, err = c_drop_vaults_beta(coordinator)
       if err then
         return nil, err
       end
 
-      _, err = c_normalize_regex_path(coordinator)
+      _, err = c_create_vaults(connector, coordinator)
+      if err then
+        return nil, err
+      end
+
+      _, err = c_migrate_regex_path(coordinator)
       if err then
         return nil, err
       end
