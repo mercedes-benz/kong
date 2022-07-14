@@ -171,7 +171,7 @@ local function get_atc(route)
   end
 
   if route.headers then
-    local headers = {}
+    local headers = fetch_table(ATC_NS, ATC_NARR, ATC_NREC)
     for h, v in pairs(route.headers) do
       local single_header = fetch_table(ATC_NS, ATC_NARR, ATC_NREC)
       for _, ind in ipairs(v) do
@@ -191,6 +191,7 @@ local function get_atc(route)
     end
 
     tb_insert(out, tb_concat(headers, " && "))
+    release_table(ATC_NS, headers)
   end
 
   local rule = tb_concat(out, " && ")
