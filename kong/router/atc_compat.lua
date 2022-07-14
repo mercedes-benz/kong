@@ -11,6 +11,7 @@ local server_name = require("ngx.ssl").server_name
 local normalize = require("kong.tools.uri").normalize
 local hostname_type = require("kong.tools.utils").hostname_type
 local tb_nkeys = require("table.nkeys")
+local tablepool = require "tablepool"
 
 
 local ngx = ngx
@@ -26,6 +27,8 @@ local get_schema = atc.get_schema
 local ffi_new = ffi.new
 local max = math.max
 local bor, band, lshift = bit.bor, bit.band, bit.lshift
+local fetch_table   = tablepool.fetch
+local release_table = tablepool.release
 local header        = ngx.header
 local var           = ngx.var
 local ngx_log       = ngx.log
@@ -38,6 +41,11 @@ local ngx_WARN = ngx.WARN
 local SLASH         = byte("/")
 local MAX_HEADER_COUNT = 255
 local MAX_REQ_HEADERS = 100
+
+
+local ATC_NS   = "atc"
+local ATC_NARR = 10
+local ATC_NREC = 0
 
 
 local function is_regex_magic(path)
@@ -105,7 +113,7 @@ local OP_REGEX = "~"
 
 
 local function get_atc(route)
-  local out = {}
+  local out = fetch_table(ATC_NS, ATC_NARR, ATC_NREC)
 
   local gen = gen_for_field("net.protocol", OP_EQUAL, route.protocols)
   if gen then
@@ -165,7 +173,7 @@ local function get_atc(route)
   if route.headers then
     local headers = {}
     for h, v in pairs(route.headers) do
-      local single_header = {}
+      local single_header = fetch_table(ATC_NS, ATC_NARR, ATC_NREC)
       for _, ind in ipairs(v) do
         local name = "any(http.headers." .. h:gsub("-", "_"):lower() .. ")"
         local value = ind
@@ -179,12 +187,16 @@ local function get_atc(route)
       end
 
       tb_insert(headers, "(" .. tb_concat(single_header, " || ") .. ")")
+      release_table(CTX_NS, single_header)
     end
 
     tb_insert(out, tb_concat(headers, " && "))
   end
 
-  return tb_concat(out, " && ")
+  local rule = tb_concat(out, " && ")
+  release_table(CTX_NS, out)
+
+  return rule
 end
 
 
