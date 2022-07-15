@@ -1,14 +1,14 @@
 local log = require "kong.cmd.utils.log"
 local arrays = require "pgmoon.arrays"
 
-local fmt = string.format
-local assert = assert
-local ipairs = ipairs
-local cassandra = require "cassandra"
-local find = string.find
-local upper = string.upper
-local re_find = ngx.re.find
-local encode_array  = arrays.encode_array
+local fmt          = string.format
+local assert       = assert
+local ipairs       = ipairs
+local cassandra    = require "cassandra"
+local find         = string.find
+local upper        = string.upper
+local re_find      = ngx.re.find
+local encode_array = arrays.encode_array
 
 
 -- remove repeated targets, the older ones are not useful anymore. targets with
@@ -292,7 +292,7 @@ local function migrate_regex(reg)
   return "~" .. normalized
 end
 
-local function c_normalize_regex_path(coordinator)
+local function c_migrate_regex_path(coordinator)
   for rows, err in coordinator:iterate("SELECT id, paths FROM routes") do
     if err then
       return nil, err
@@ -301,19 +301,19 @@ local function c_normalize_regex_path(coordinator)
     for i = 1, #rows do
       local route = rows[i]
 
+      if not route.paths then
+        goto continue
+      end
 
       local changed = false
-      for i, path in ipairs(route.paths) do
-        if is_not_regex(path) then
-          goto continue
+      for j, path in ipairs(route.paths) do
+        if not is_not_regex(path) then
+          local migrated_path = migrate_regex(path)
+          if migrated_path ~= path then
+            changed = true
+            route.paths[j] = migrated_path
+          end
         end
-
-        local normalized_path = migrate_regex(path)
-        if normalized_path ~= path then
-          changed = true
-          route.paths[i] = normalized_path
-        end
-        ::continue::
       end
 
       if changed then
@@ -325,6 +325,7 @@ local function c_normalize_regex_path(coordinator)
           return nil, err
         end
       end
+      ::continue::
     end
   end
   return true
@@ -548,7 +549,7 @@ return {
         return nil, err
       end
 
-      _, err = c_normalize_regex_path(coordinator)
+      _, err = c_migrate_regex_path(coordinator)
       if err then
         return nil, err
       end
