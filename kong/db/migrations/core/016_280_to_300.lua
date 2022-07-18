@@ -1,13 +1,13 @@
 local log = require "kong.cmd.utils.log"
 local arrays = require "pgmoon.arrays"
 
-local fmt          = string.format
-local assert       = assert
-local ipairs       = ipairs
-local cassandra    = require "cassandra"
-local find         = string.find
-local upper        = string.upper
-local re_find      = ngx.re.find
+local fmt = string.format
+local assert = assert
+local ipairs = ipairs
+local cassandra = require "cassandra"
+local find = string.find
+local upper = string.upper
+local re_find = ngx.re.find
 local encode_array = arrays.encode_array
 
 
