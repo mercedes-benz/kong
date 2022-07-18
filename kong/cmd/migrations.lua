@@ -26,7 +26,7 @@ The available commands are:
 
   reset                             Reset the database. The `reset` command erases all of the data in Kong's database and deletes all of the schemas.
 
-  status                            Dump the database migration status to a JSON file
+  status                            Dump the database migration status in JSON format
 
 Options:
  -y,--yes                           Assume "yes" to prompts and run
