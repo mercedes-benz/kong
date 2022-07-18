@@ -225,6 +225,8 @@
   migrations, designating a function to call.  The `up_f` part is
   invoked after the `up` part has been executed against the database
   for both Postgres and Cassandra.
+  
+  - A new CLI command, `kong migrations status`, generates the status on a JSON file.
 
 ### Dependencies
 
