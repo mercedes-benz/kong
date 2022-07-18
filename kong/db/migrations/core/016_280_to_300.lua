@@ -451,36 +451,14 @@ return {
       end
 
       local _, err = connector:query([[
-      DO $$
-      BEGIN
-        -- we only want to run this migration if there is vaults_beta table
-        IF (SELECT to_regclass('vaults_beta')) IS NOT NULL THEN
-          DROP TRIGGER IF EXISTS "vaults_beta_sync_tags_trigger" ON "vaults_beta";
+        CREATE TABLE vaults ( LIKE vaults_beta INCLUDING ALL );
 
-          -- Enterprise Edition has a Vaults table created by a Vault Auth Plugin
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME TO "vault_auth_vaults";
-          ALTER TABLE IF EXISTS ONLY "vault_auth_vaults" RENAME CONSTRAINT "vaults_pkey" TO "vault_auth_vaults_pkey";
-          ALTER TABLE IF EXISTS ONLY "vault_auth_vaults" RENAME CONSTRAINT "vaults_name_key" TO "vault_auth_vaults_name_key";
+        CREATE TRIGGER "vaults_sync_tags_trigger"
+        AFTER INSERT OR UPDATE OF "tags" OR DELETE ON "vaults"
+        FOR EACH ROW
+        EXECUTE PROCEDURE sync_tags();
 
-          ALTER TABLE IF EXISTS ONLY "vaults_beta" RENAME TO "vaults";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_pkey" TO "vaults_pkey";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_id_ws_id_key" TO "vaults_id_ws_id_key";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_prefix_key" TO "vaults_prefix_key";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_prefix_ws_id_key" TO "vaults_prefix_ws_id_key";
-          ALTER TABLE IF EXISTS ONLY "vaults" RENAME CONSTRAINT "vaults_beta_ws_id_fkey" TO "vaults_ws_id_fkey";
-
-          ALTER INDEX IF EXISTS "vaults_beta_tags_idx" RENAME TO "vaults_tags_idx";
-
-          BEGIN
-            CREATE TRIGGER "vaults_sync_tags_trigger"
-            AFTER INSERT OR UPDATE OF "tags" OR DELETE ON "vaults"
-            FOR EACH ROW
-            EXECUTE PROCEDURE sync_tags();
-          EXCEPTION WHEN UNDEFINED_COLUMN OR UNDEFINED_TABLE THEN
-            -- Do nothing, accept existing state
-          END;
-        END IF;
-      END$$;
+        ALTER TABLE vaults ADD CONSTRAINT vaults_ws_id_fkey FOREIGN KEY(ws_id) REFERENCES workspaces(id);
       ]])
       if err then
         return nil, err
@@ -489,6 +467,14 @@ return {
       return true
     end,
     teardown = function(connector)
+      local _, err = connector:query([[
+        DROP TABLE vaults_beta;
+        ]])
+
+      if err then
+        return nil, err
+      end
+
       local _, err = p_update_cache_key(connector)
       if err then
         return nil, err
