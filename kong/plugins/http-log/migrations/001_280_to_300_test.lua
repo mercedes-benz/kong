@@ -2,7 +2,7 @@
 local cjson = require "cjson"
 local tablex = require "pl.tablex"
 
-local upgrade_helpers = require "spec/upgrade_helpers"
+local uh = require "spec/upgrade_helpers"
 
 local HTTP_PORT = 29100
 
@@ -57,16 +57,16 @@ end
 
 describe("http-log plugin migration", function()
 
-    lazy_setup(upgrade_helpers.start_kong)
-    lazy_teardown(upgrade_helpers.stop_kong)
+    lazy_setup(uh.start_kong)
+    lazy_teardown(uh.stop_kong)
 
     local log_server_url = "http://localhost:" .. HTTP_PORT .. "/"
 
     local custom_header_name = "X-Test-Header"
     local custom_header_content = "this is it"
 
-    upgrade_helpers.setup(function ()
-        local admin_client = assert(upgrade_helpers.admin_client())
+    uh.setup(function ()
+        local admin_client = assert(uh.admin_client())
         local res = assert(admin_client:send {
             method = "POST",
             path = "/plugins/",
@@ -84,13 +84,13 @@ describe("http-log plugin migration", function()
         assert.res_status(201, res)
         admin_client:close()
 
-        upgrade_helpers.create_example_service()
+        uh.create_example_service()
     end)
 
-    upgrade_helpers.it_when("all_phases", "expected log header is added", function ()
+    uh.it_when("all_phases", "expected log header is added", function ()
         local thread = http_server(HTTP_PORT, { timeout = 10 })
 
-        upgrade_helpers.send_proxy_get_request()
+        uh.send_proxy_get_request()
 
         local ok, headers = thread:join()
         assert.truthy(ok)
@@ -100,8 +100,8 @@ describe("http-log plugin migration", function()
         assert.not_nil(idx, headers)
     end)
 
-    upgrade_helpers.it_when("new_after_finish", "has updated http-log configuration", function ()
-        local admin_client = assert(upgrade_helpers.admin_client())
+    uh.it_when("new_after_finish", "has updated http-log configuration", function ()
+        local admin_client = assert(uh.admin_client())
         local res = assert(admin_client:send {
             method = "GET",
             path = "/plugins/"

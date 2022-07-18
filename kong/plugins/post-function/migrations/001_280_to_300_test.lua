@@ -1,18 +1,18 @@
 
 local cjson = require "cjson"
 
-local upgrade_helpers = require "spec/upgrade_helpers"
+local uh = require "spec/upgrade_helpers"
 
 describe("post-function plugin migration", function()
 
-    lazy_setup(upgrade_helpers.start_kong)
-    lazy_teardown(upgrade_helpers.stop_kong)
+    lazy_setup(uh.start_kong)
+    lazy_teardown(uh.stop_kong)
 
     local custom_header_name = "X-Test-Header"
     local custom_header_content = "this is it"
 
-    upgrade_helpers.it_when("old_before", "can setup post-function plugin", function ()
-        local admin_client = upgrade_helpers.admin_client()
+    uh.it_when("old_before", "can setup post-function plugin", function ()
+        local admin_client = uh.admin_client()
         local res = assert(admin_client:send {
             method = "POST",
             path = "/plugins/",
@@ -31,11 +31,11 @@ describe("post-function plugin migration", function()
         assert.res_status(201, res)
         admin_client:close()
 
-        upgrade_helpers.create_example_service()
+        uh.create_example_service()
     end)
 
-    upgrade_helpers.it_when("all_phases", "expected log header is added", function ()
-        local res, body = upgrade_helpers.send_proxy_get_request()
+    uh.it_when("all_phases", "expected log header is added", function ()
+        local res, body = uh.send_proxy_get_request()
 
         -- verify that HTTP response has had the header added by the plugin
         assert.equal(custom_header_content, res.headers[custom_header_name])
