@@ -1,5 +1,4 @@
 local cjson = require "cjson"
-local inspect = require "inspect"
 
 local uh = require "spec/upgrade_helpers"
 
