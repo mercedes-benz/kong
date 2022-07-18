@@ -158,7 +158,6 @@ local function execute(args)
 
   elseif args.command == "status" then
 
-    local inspect = require "inspect"
     -- Clean up the schema_state data structure so that it can be
     -- serialized as json.
     local function cleanup (namespace_migrations)
