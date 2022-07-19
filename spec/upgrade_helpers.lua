@@ -131,7 +131,7 @@ local function new_after_up(phrase, f)
   return it_when("new_after_up", phrase, f)
 end
 
-local function new_after_finish, phrase, f)
+local function new_after_finish(phrase, f)
   return it_when("new_after_finish", phrase, f)
 end
 
