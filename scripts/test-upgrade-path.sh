@@ -70,7 +70,7 @@ NETWORK_NAME=migration-$OLD_VERSION-$NEW_VERSION
 
 # Between docker-compose v1 and docker-compose v2, the delimiting
 # character for container names was changed from "-" to "_".
-if [ $(docker-compose --version) =~ v2 ]
+if [[ "$(docker-compose --version)" =~ v2 ]]
 then
     OLD_CONTAINER=$(gojira prefix -t $OLD_VERSION)-kong-1
     NEW_CONTAINER=$(gojira prefix -t $NEW_VERSION)-kong-1
