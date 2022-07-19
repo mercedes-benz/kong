@@ -1,5 +1,9 @@
 #!/bin/bash
 
+set -e
+
+trap "echo exiting because of error" 0
+
 function usage() {
     cat 1>&2 <<EOF
 usage: $0 [-n] <from-version> <to-version> [ <test> ... ]
@@ -63,10 +67,6 @@ shift ; shift
 TESTS=$*
 
 NETWORK_NAME=migration-$OLD_VERSION-$NEW_VERSION
-
-set -e
-
-trap "echo exiting because of error" 0
 
 # Between docker-compose v1 and docker-compose v2, the delimiting
 # character for container names was changed from "-" to "_".
