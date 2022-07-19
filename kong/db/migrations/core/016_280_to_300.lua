@@ -358,8 +358,8 @@ local function p_update_cache_key(connector)
   return true
 end
 
-local function ensure_empty_vaults_tables do
-  local function ensure_table_is_empty(connector, table)
+local ensure_empty_vaults_tables do
+  local ensure_table_is_empty = function(connector, table)
     local res, err = connector:query("SELECT * FROM " .. table)
     if err then
       -- Assume that the error is about the missing table, which is OK
