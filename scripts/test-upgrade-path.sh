@@ -68,8 +68,16 @@ set -e
 
 trap "echo exiting because of error" 0
 
-OLD_CONTAINER=$(gojira prefix -t $OLD_VERSION)-kong-1
-NEW_CONTAINER=$(gojira prefix -t $NEW_VERSION)-kong-1
+# Between docker-compose v1 and docker-compose v2, the delimiting
+# character for container names was changed from "-" to "_".
+if [ $(docker-compose --version) =~ v2 ]
+then
+    OLD_CONTAINER=$(gojira prefix -t $OLD_VERSION)-kong-1
+    NEW_CONTAINER=$(gojira prefix -t $NEW_VERSION)-kong-1
+else
+    OLD_CONTAINER=$(gojira prefix -t $OLD_VERSION)_kong_1
+    NEW_CONTAINER=$(gojira prefix -t $NEW_VERSION)_kong_1
+fi
 
 mkdir -p upgrade-test-log
 cd upgrade-test-log
