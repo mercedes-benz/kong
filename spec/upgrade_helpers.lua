@@ -22,10 +22,8 @@ end
 local function table_has_column(state, arguments)
    local table = arguments[1]
    local column_name = arguments[2]
-   local type = arguments[3]
-   -- The type argument is not yet normalized.  No problem for 'text'
-   -- columns, but won't work for 'int' (Cassandra) vs. 'integer'
-   -- (Postgres) yet.
+   local postgres_type = arguments[3]
+   local cassandra_type = arguments[3] or postgres_type
    local db = get_database()
    local res, err
    if database_type() == 'cassandra' then
@@ -36,7 +34,7 @@ local function table_has_column(state, arguments)
                                        .. "   and column_name = '%s'"
                                        .. "   and type = '%s'"
                                        .. " allow filtering",
-                                       table, column_name, type))
+                                       table, column_name, cassandra_type))
    elseif database_type() == 'postgres' then
       res, err = db.connector:query(string.format(
                                        "select true"
@@ -45,7 +43,7 @@ local function table_has_column(state, arguments)
                                        .. "   and table_name = '%s'"
                                        .. "   and column_name = '%s'"
                                        .. "   and data_type = '%s'",
-                                       table, column_name, type))
+                                       table, column_name, postgres_type))
    else
       return false
    end
