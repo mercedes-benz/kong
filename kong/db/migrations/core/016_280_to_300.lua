@@ -358,8 +358,8 @@ local function p_update_cache_key(connector)
   return true
 end
 
-local function ensure_empty_vaults_tables(connector)
-  local ensure_table_is_empty = function (table)
+local function ensure_empty_vaults_tables do
+  local ensure_table_is_empty = function (connector, table)
     local res, err = connector:query("SELECT * FROM " .. table)
     if err then
       -- Assume that the error is about the missing table, which is OK
@@ -370,16 +370,18 @@ local function ensure_empty_vaults_tables(connector)
     end
   end
 
-  local res, err = ensure_table_is_empty("vaults_beta")
-  if err then
-    return nil, err
-  end
-  local res, err = ensure_table_is_empty("vaults")
-  if err then
-    return nil, err
+  ensure_empty_vaults_tables = function(connector)
+
+    local res, err = ensure_table_is_empty(connector, "vaults_beta")
+    if err then
+      return nil, err
+    end
+    local res, err = ensure_table_is_empty(connector, "vaults")
+    if err then
+      return nil, err
+    end
   end
 end
-
 return {
   postgres = {
     up = [[
