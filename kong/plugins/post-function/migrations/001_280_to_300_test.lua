@@ -11,7 +11,7 @@ describe("post-function plugin migration", function()
     local custom_header_name = "X-Test-Header"
     local custom_header_content = "this is it"
 
-    uh.it_when("old_before", "can setup post-function plugin", function ()
+    uh.setup(function ()
         local admin_client = uh.admin_client()
         local res = assert(admin_client:send {
             method = "POST",
@@ -34,7 +34,7 @@ describe("post-function plugin migration", function()
         uh.create_example_service()
     end)
 
-    uh.it_when("all_phases", "expected log header is added", function ()
+    uh.all_phases("expected log header is added", function ()
         local res, body = uh.send_proxy_get_request()
 
         -- verify that HTTP response has had the header added by the plugin

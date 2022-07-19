@@ -87,7 +87,7 @@ describe("http-log plugin migration", function()
         uh.create_example_service()
     end)
 
-    uh.it_when("all_phases", "expected log header is added", function ()
+    uh.all_phases("expected log header is added", function ()
         local thread = http_server(HTTP_PORT, { timeout = 10 })
 
         uh.send_proxy_get_request()
@@ -100,7 +100,7 @@ describe("http-log plugin migration", function()
         assert.not_nil(idx, headers)
     end)
 
-    uh.it_when("new_after_finish", "has updated http-log configuration", function ()
+    uh.new_after_finish("has updated http-log configuration", function ()
         local admin_client = assert(uh.admin_client())
         local res = assert(admin_client:send {
             method = "GET",

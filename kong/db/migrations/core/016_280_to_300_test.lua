@@ -5,7 +5,7 @@ local uh = require "spec/upgrade_helpers"
 local HEADERS = { ["Content-Type"] = "application/json" }
 
 describe("database migration", function()
-    uh.it_when("old_after_up", "has created the expected new columns", function()
+    uh.old_after_up("has created the expected new columns", function()
         assert.table_has_column("targets", "cache_key", "text")
         assert.table_has_column("upstreams", "hash_on_query_arg", "text")
         assert.table_has_column("upstreams", "hash_fallback_query_arg", "text")
@@ -33,6 +33,6 @@ describe("vault related data migration", function()
       end
     end
 
-    uh.it_when("old_before", "has no vaults", assert_no_entities("/vaults-beta"))
-    uh.it_when("new_after_finish", "has no vault", assert_no_entities("/vaults"))
+    uh.setup(assert_no_entities("/vaults-beta"))
+    uh.new_after_finish("has no vaults", assert_no_entities("/vaults"))
 end)

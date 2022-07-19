@@ -118,8 +118,25 @@ end
 local function it_when(phase, phrase, f)
   return busted.it(phrase .. " #" .. phase, f)
 end
+
 local function setup(f)
   return busted.it("setting up kong #old_before", f)
+end
+
+local function old_after_up(phrase, f)
+  return it_when("old_after_up", phrase, f)
+end
+
+local function new_after_up(phrase, f)
+  return it_when("new_after_up", phrase, f)
+end
+
+local function new_after_finish, phrase, f)
+  return it_when("new_after_finish", phrase, f)
+end
+
+local function all_phases(phrase, f)
+  return it_when("all_phases", phrase, f)
 end
 
 return {
@@ -131,6 +148,9 @@ return {
    stop_kong = helpers.stop_kong,
    admin_client = helpers.admin_client,
    proxy_client = helpers.proxy_client,
-   it_when = it_when,
-   setup = setup
+   setup = setup,
+   old_after_up = old_after_up,
+   new_after_up = new_after_up,
+   new_after_finish = new_after_finish,
+   all_phases = all_phases
 }
