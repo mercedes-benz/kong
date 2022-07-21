@@ -454,14 +454,20 @@ return {
       end
 
       local _, err = connector:query([[
-        CREATE TABLE vaults ( LIKE vaults_beta INCLUDING ALL );
+        DO $$
+          BEGIN
+            IF (SELECT to_regclass('vaults_beta')) IS NOT NULL THEN
+              CREATE TABLE vaults ( LIKE vaults_beta INCLUDING ALL );
 
-        CREATE TRIGGER "vaults_sync_tags_trigger"
-        AFTER INSERT OR UPDATE OF "tags" OR DELETE ON "vaults"
-        FOR EACH ROW
-        EXECUTE PROCEDURE sync_tags();
+              CREATE TRIGGER "vaults_sync_tags_trigger"
+              AFTER INSERT OR UPDATE OF "tags" OR DELETE ON "vaults"
+              FOR EACH ROW
+              EXECUTE PROCEDURE sync_tags();
 
-        ALTER TABLE vaults ADD CONSTRAINT vaults_ws_id_fkey FOREIGN KEY(ws_id) REFERENCES workspaces(id);
+              ALTER TABLE vaults ADD CONSTRAINT vaults_ws_id_fkey FOREIGN KEY(ws_id) REFERENCES workspaces(id);
+            END IF;
+          END$$;
+
       ]])
       if err then
         return nil, err
@@ -472,7 +478,7 @@ return {
 
     teardown = function(connector)
       local _, err = connector:query([[
-        DROP TABLE vaults_beta;
+        DROP TABLE IF EXISTS vaults_beta;
         ]])
 
       if err then
