@@ -38,7 +38,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run upgrade tests
+      - name: Run upgrade tests (Postgres)
         run: |
           export GOJIRA_KONG_REPO_URL=$GITHUB_WORKSPACE
+          bash -x ./scripts/test-upgrade-path.sh -d postgres 2.8.0 $GITHUB_REF_NAME
+
+      - name: Run upgrade tests (Cassandra)
+        run: |
+          export GOJIRA_KONG_REPO_URL=$GITHUB_WORKSPACE
+          gojira nuke
           bash -x ./scripts/test-upgrade-path.sh -d postgres 2.8.0 $GITHUB_REF_NAME
