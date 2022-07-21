@@ -2,8 +2,6 @@ local cjson = require "cjson"
 
 local uh = require "spec/upgrade_helpers"
 
-local HEADERS = { ["Content-Type"] = "application/json" }
-
 describe("database migration", function()
     uh.old_after_up("has created the expected new columns", function()
         assert.table_has_column("targets", "cache_key", "text")

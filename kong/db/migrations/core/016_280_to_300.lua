@@ -372,11 +372,11 @@ local ensure_empty_vaults_tables do
 
   ensure_empty_vaults_tables = function(connector)
 
-    local res, err = ensure_table_is_empty(connector, "vaults_beta")
+    local _, err = ensure_table_is_empty(connector, "vaults_beta")
     if err then
       return nil, err
     end
-    local res, err = ensure_table_is_empty(connector, "vaults")
+    local _, err = ensure_table_is_empty(connector, "vaults")
     if err then
       return nil, err
     end
@@ -445,9 +445,10 @@ return {
         END;
       $$;
     ]],
+
     up_f = function(connector)
 
-      local res, err = ensure_empty_vaults_tables(connector)
+      local _, err = ensure_empty_vaults_tables(connector)
       if err then
         return nil, err
       end
@@ -468,6 +469,7 @@ return {
 
       return true
     end,
+
     teardown = function(connector)
       local _, err = connector:query([[
         DROP TABLE vaults_beta;
@@ -526,7 +528,7 @@ return {
     ]],
 
     up_f = function(connector)
-      local res, err = ensure_empty_vaults_tables(connector)
+      local _, err = ensure_empty_vaults_tables(connector)
       if err then
         return nil, err
       end

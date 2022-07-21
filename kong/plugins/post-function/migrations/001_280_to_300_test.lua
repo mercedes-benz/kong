@@ -1,6 +1,4 @@
 
-local cjson = require "cjson"
-
 local uh = require "spec/upgrade_helpers"
 
 describe("post-function plugin migration", function()
@@ -35,7 +33,7 @@ describe("post-function plugin migration", function()
     end)
 
     uh.all_phases("expected log header is added", function ()
-        local res, body = uh.send_proxy_get_request()
+        local res = uh.send_proxy_get_request()
 
         -- verify that HTTP response has had the header added by the plugin
         assert.equal(custom_header_content, res.headers[custom_header_name])
