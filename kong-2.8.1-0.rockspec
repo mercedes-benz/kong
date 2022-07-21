@@ -240,6 +240,7 @@ build = {
     ["kong.db.migrations.core.014_230_to_270"] = "kong/db/migrations/core/014_230_to_270.lua",
     ["kong.db.migrations.core.015_270_to_280"] = "kong/db/migrations/core/015_270_to_280.lua",
     ["kong.db.migrations.core.016_280_to_300"] = "kong/db/migrations/core/016_280_to_300.lua",
+    ["kong.db.migrations.core.016_280_to_300_test"] = "kong/db/migrations/core/016_280_to_300_test.lua",
     ["kong.db.migrations.operations.200_to_210"] = "kong/db/migrations/operations/200_to_210.lua",
     ["kong.db.migrations.operations.210_to_211"] = "kong/db/migrations/operations/210_to_211.lua",
     ["kong.db.migrations.operations.212_to_213"] = "kong/db/migrations/operations/212_to_213.lua",
@@ -306,6 +307,7 @@ build = {
     ["kong.plugins.http-log.schema"] = "kong/plugins/http-log/schema.lua",
     ["kong.plugins.http-log.migrations"] = "kong/plugins/http-log/migrations/init.lua",
     ["kong.plugins.http-log.migrations.001_280_to_300"] = "kong/plugins/http-log/migrations/001_280_to_300.lua",
+    ["kong.plugins.http-log.migrations.001_280_to_300_test"] = "kong/plugins/http-log/migrations/001_280_to_300_test.lua",
 
     ["kong.plugins.file-log.handler"] = "kong/plugins/file-log/handler.lua",
     ["kong.plugins.file-log.schema"] = "kong/plugins/file-log/schema.lua",
@@ -429,6 +431,7 @@ build = {
     ["kong.plugins.acme.handler"] = "kong/plugins/acme/handler.lua",
     ["kong.plugins.acme.migrations.000_base_acme"] = "kong/plugins/acme/migrations/000_base_acme.lua",
     ["kong.plugins.acme.migrations.001_280_to_300"] = "kong/plugins/acme/migrations/001_280_to_300.lua",
+    ["kong.plugins.acme.migrations.001_280_to_300_test"] = "kong/plugins/acme/migrations/001_280_to_300_test.lua",
     ["kong.plugins.acme.migrations"] = "kong/plugins/acme/migrations/init.lua",
     ["kong.plugins.acme.schema"] = "kong/plugins/acme/schema.lua",
     ["kong.plugins.acme.storage.kong"] = "kong/plugins/acme/storage/kong.lua",
@@ -471,11 +474,13 @@ build = {
     ["kong.plugins.pre-function.schema"] = "kong/plugins/pre-function/schema.lua",
     ["kong.plugins.pre-function.migrations"] = "kong/plugins/pre-function/migrations/init.lua",
     ["kong.plugins.pre-function.migrations.001_280_to_300"] = "kong/plugins/pre-function/migrations/001_280_to_300.lua",
+    ["kong.plugins.pre-function.migrations.001_280_to_300_test"] = "kong/plugins/pre-function/migrations/001_280_to_300_test.lua",
 
     ["kong.plugins.post-function.handler"] = "kong/plugins/post-function/handler.lua",
     ["kong.plugins.post-function.schema"] = "kong/plugins/post-function/schema.lua",
     ["kong.plugins.post-function.migrations"] = "kong/plugins/post-function/migrations/init.lua",
     ["kong.plugins.post-function.migrations.001_280_to_300"] = "kong/plugins/post-function/migrations/001_280_to_300.lua",
+    ["kong.plugins.post-function.migrations.001_280_to_300_test"] = "kong/plugins/post-function/migrations/001_280_to_300_test.lua",
 
     ["kong.plugins.zipkin.handler"] = "kong/plugins/zipkin/handler.lua",
     ["kong.plugins.zipkin.reporter"] = "kong/plugins/zipkin/reporter.lua",
